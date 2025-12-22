@@ -159,10 +159,11 @@ def scrape_kijiji():
         raise HTTPException(500, "Request failed")
 
     match = re.search(
-        r'<script[^>]+type="application/json"[^>]>(.?)</script>',
+        r'<script[^>]*type="application/json"[^>]*>(.*?)</script>',
         r.text,
         re.DOTALL,
     )
+
 
     if not match:
         raise HTTPException(500, "Embedded JSON not found")

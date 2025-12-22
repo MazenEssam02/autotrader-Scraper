@@ -166,7 +166,6 @@ def scrape_kijiji():
 
 
     if not match:
-        print(r.text[:2000])  # see what Vercel receives
         raise HTTPException(500, "Embedded JSON not found")
 
 

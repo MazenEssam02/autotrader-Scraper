@@ -145,9 +145,6 @@ def parse_kijiji_date(date_str):
 # API ENDPOINT
 # =============================
 @app.get("/")
-def health_check():
-    return {"status": "ok"}
-@app.get("/scrape_kijiji")
 def scrape_kijiji():
 
     r = requests.get(

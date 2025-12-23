@@ -546,13 +546,13 @@ def scrape_autotrader():
             )
 
         html = response.text
-
+        print(html[:500])
         # Parse embedded JSON
-        match =  re.search(
-    r'<script[^>]*type=["\']application/(?:json|ld\+json)[^"\']*["\'][^>]*>(.*?)</script>',
-    html,
-    re.DOTALL | re.IGNORECASE
-)
+        match = re.search(
+            r'<script[^>]+type="application/json"[^>]*>(.*?)</script>',
+            html,
+            re.DOTALL
+        )
 
         if not match:
             raise HTTPException(

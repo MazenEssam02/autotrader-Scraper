@@ -319,8 +319,6 @@ import requests
 import json
 import re
 import warnings
-from playwright.sync_api import sync_playwright
-
 from datetime import datetime, timezone
 warnings.filterwarnings("ignore")
 
@@ -460,51 +458,9 @@ COOKIES = {
     '_clsk': '1husmi%5E1762772107776%5E3%5E0%5Eo.clarity.ms%2Fcollect',
     'panoramaId_expiry': '1762858506944',
 }
-from playwright.sync_api import sync_playwright
+
 from urllib.parse import urlencode
 
-def playwright_get(
-    url: str,
-    params: dict | None = None,
-    headers: dict | None = None,
-    cookies: dict | None = None,
-    timeout: int = 30000
-) -> str:
-    # Build URL with params (like requests)
-    if params:
-        url = f"{url}?{urlencode(params, doseq=True)}"
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=True,
-            args=["--disable-blink-features=AutomationControlled"]
-        )
-
-        context = browser.new_context(
-            extra_http_headers=headers or {}
-        )
-
-        # Convert requests-style cookies to Playwright format
-        if cookies:
-            context.add_cookies([
-                {
-                    "name": k,
-                    "value": v,
-                    "domain": url.split("//")[1].split("/")[0],
-                    "path": "/"
-                }
-                for k, v in cookies.items()
-            ])
-
-        page = context.new_page()
-        page.goto(url, wait_until="networkidle", timeout=timeout)
-
-        html = page.content()
-
-        context.close()
-        browser.close()
-
-        return html
 
 # =============================
 # FASTAPI ENDPOINTS
@@ -526,29 +482,22 @@ def scrape_autotrader():
     """
     try:
         # Make request
-        # response = requests.get(
-        #     URL,
-        #     params=PARAMS,
-        #     headers=HEADERS,
-        #     cookies=COOKIES,
-        #     verify=False,
-        #     timeout=30
-        # )
-        html = playwright_get(
+        response = requests.get(
             URL,
             params=PARAMS,
             headers=HEADERS,
             cookies=COOKIES,
-            timeout=30000
+            verify=False,
+            timeout=30
         )
-        # if response.status_code != 200:
-        #     raise HTTPException(
-        #         status_code=500,
-        #         detail=f"Request failed with status code: {response.status_code}"
-        #     )
+        
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Request failed with status code: {response.status_code}"
+            )
 
-        # html = response.text
-        print(html[:500])
+        html = response.text
         # Parse embedded JSON
         match = re.search(
             r'<script[^>]+type="application/json"[^>]*>(.*?)</script>',

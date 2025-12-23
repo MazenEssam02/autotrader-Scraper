@@ -418,6 +418,23 @@ import requests
 import json
 import re
 import warnings
+from playwright.sync_api import sync_playwright
+
+
+def fetch_html_with_playwright(url: str) -> str:
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=True,
+            args=["--disable-blink-features=AutomationControlled"]
+        )
+        page = browser.new_page()
+
+        page.goto(url, wait_until="networkidle", timeout=30000)
+
+        html = page.content()
+        browser.close()
+        return html
+
 
 warnings.filterwarnings("ignore")
 
@@ -529,29 +546,21 @@ def scrape_autotrader():
     Scrape Autotrader listings and return structured data
     """
     try:
-        # Make request
-        response = requests.get(
-            URL,
-            params=PARAMS,
-            headers=HEADERS,
-            cookies=COOKIES,
-            verify=False,
-            timeout=30
-        )
+        html = fetch_html_with_playwright(URL)
+        print(html[:500])
 
-        if response.status_code != 200:
+        # Optional: detect Incapsula explicitly
+        if "Incapsula_Resource" in html:
             raise HTTPException(
-                status_code=500,
-                detail=f"Request failed with status code: {response.status_code}"
+                status_code=403,
+                detail="Blocked by Incapsula"
             )
 
-        html = response.text
-        print(html[:500])
-        # Parse embedded JSON
+        # Parse embedded JSON (UNCHANGED)
         match = re.search(
-            r'<script[^>]+type="application/json"[^>]*>(.*?)</script>',
+            r'<script[^>]+type=["\']application/(?:json|ld\+json)[^"\']*["\'][^>]*>(.*?)</script>',
             html,
-            re.DOTALL
+            re.DOTALL | re.IGNORECASE
         )
 
         if not match:
@@ -559,6 +568,7 @@ def scrape_autotrader():
                 status_code=500,
                 detail="Embedded JSON not found in response"
             )
+
 
         json_text = match.group(1).replace("&quot;", '"')
         data = json.loads(json_text)

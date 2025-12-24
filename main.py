@@ -7,72 +7,6 @@ import re
 import warnings
 from datetime import datetime, timezone
 warnings.filterwarnings("ignore")
-
-
-def parse_kijiji_date(date_str):
-    if not date_str:
-        return None
-    try:
-        return datetime.strptime(
-            date_str, "%Y-%m-%dT%H:%M:%S.%fZ"
-        ).replace(tzinfo=timezone.utc)
-    except ValueError:
-        return datetime.strptime(
-            date_str, "%Y-%m-%dT%H:%M:%SZ"
-        ).replace(tzinfo=timezone.utc)
-
-def find_autos_listings(obj, results=None):
-    if results is None:
-        results = {}
-
-    if isinstance(obj, dict):
-        for k, v in obj.items():
-            if k.startswith("AutosListing:"):
-                results[k] = v
-            else:
-                find_autos_listings(v, results)
-
-    elif isinstance(obj, list):
-        for item in obj:
-            find_autos_listings(item, results)
-
-    return results
-def extract_embedded_data(html: str) -> dict:
-    patterns = [
-        # Next.js
-        r'<script[^>]+id="__NEXT_DATA__"[^>]*>(.*?)</script>',
-
-        # Window initial state
-        r'window\.__INITIAL_STATE__\s*=\s*(\{.*?\});',
-
-        # Generic application/json
-        r'<script[^>]*type=["\']application/json["\'][^>]*>(.*?)</script>',
-    ]
-
-    for pattern in patterns:
-        match = re.search(pattern, html, re.DOTALL | re.IGNORECASE)
- 
-        if not match:
-            continue
-
-        raw_json = (
-        match.group(1)
-        .replace("&quot;", '"')
-        .replace("&amp;", "&")
-        .strip()
-    )
-
-        try:
-            return json.loads(raw_json)
-        except json.JSONDecodeError:
-            # Some sites embed escaped JSON inside JS
-            try:
-                return json.loads(raw_json.encode().decode("unicode_escape"))
-            except Exception:
-                continue
-
-    # Nothing matched
-    raise ValueError("No embedded JSON data found")
 app = FastAPI(title=" Scraping API")
 # =============================
 # CONFIGURATION
@@ -180,9 +114,37 @@ COOKIES = {
     'panoramaId_expiry': '1762858506944',
 }
 
-from urllib.parse import urlencode
+# =============================
+# HELPER FUNCTIONS
+# =============================
+def parse_kijiji_date(date_str):
+    if not date_str:
+        return None
+    try:
+        return datetime.strptime(
+            date_str, "%Y-%m-%dT%H:%M:%S.%fZ"
+        ).replace(tzinfo=timezone.utc)
+    except ValueError:
+        return datetime.strptime(
+            date_str, "%Y-%m-%dT%H:%M:%SZ"
+        ).replace(tzinfo=timezone.utc)
 
+def find_autos_listings(obj, results=None):
+    if results is None:
+        results = {}
 
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if k.startswith("AutosListing:"):
+                results[k] = v
+            else:
+                find_autos_listings(v, results)
+
+    elif isinstance(obj, list):
+        for item in obj:
+            find_autos_listings(item, results)
+
+    return results
 # =============================
 # FASTAPI ENDPOINTS
 # =============================

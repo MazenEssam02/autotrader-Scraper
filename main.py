@@ -641,7 +641,7 @@ def scrape_kijiji():
         r.text,
         re.DOTALL,
     )
-
+    print(r.text)
 
     if not match:
         raise HTTPException(500, "Embedded JSON not found")
